@@ -94,9 +94,10 @@ export function ExtractionSetup({
         runs on this phone, including offline.
       </Text>
       <Text style={styles.body}>
-        After transcription, review suggestions for affected people, hazards and
-        requested needs. Unknown details stay blank. Suggestions can misclassify
-        excerpts; verify numbers, negations and Taglish wording.
+        After transcription, affected people, hazards and requested needs fill
+        automatically. Review the fields before saving. Manual edits are kept.
+        Unknown details stay blank. Suggestions can misclassify excerpts; verify
+        numbers, negations and Taglish wording.
       </Text>
       {busy && (
         <Busy

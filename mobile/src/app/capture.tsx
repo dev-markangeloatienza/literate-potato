@@ -22,7 +22,10 @@ import * as Location from "expo-location";
 import * as store from "../storage";
 import * as speech from "../speech";
 import * as extraction from "../extraction";
-import { extractionFields, ExtractionField } from "../extraction-domain";
+import {
+  autoFillIncidentFields,
+  editIncidentDraft,
+} from "../incident-autofill";
 import { recorder } from "../../modules/field-recorder";
 import { Button, Busy, Field, Notice, styles, colors } from "../ui";
 
@@ -64,6 +67,13 @@ export default function Capture() {
       } else {
         value = saved || store.newDraft();
         setRecovered(!!saved);
+      }
+      if (value.extraction_review?.transcript === value.note) {
+        value = autoFillIncidentFields(
+          value,
+          value.extraction_review.suggestions,
+        );
+        await store.setSetting(id ? "draft:" + id : "draft", value);
       }
       if (active) {
         latest.current = value;
@@ -146,11 +156,9 @@ export default function Capture() {
       if (mounted.current) setBusy("");
     }
   }
-  function update(patch: Partial<Draft>) {
+  function update(patch: Partial<Draft>, manual = false) {
     if (!latest.current) return;
-    const value = { ...latest.current, ...patch };
-    if (patch.note !== undefined && patch.note !== latest.current.note)
-      value.extraction_review = undefined;
+    const value = editIncidentDraft(latest.current, patch, manual);
     latest.current = value;
     dirty.current = true;
     setDraft(value);
@@ -312,7 +320,7 @@ export default function Capture() {
       token === operation.current.generation &&
       latest.current?.note === text
     )
-      update({ extraction_review: { transcript: text, suggestions } });
+      update(autoFillIncidentFields(latest.current, suggestions));
   }
   async function suggest() {
     const text = latest.current?.note;
@@ -332,18 +340,6 @@ export default function Capture() {
     } finally {
       if (mounted.current) setBusy("");
     }
-  }
-  function acceptSuggestion(field: ExtractionField) {
-    const current = latest.current;
-    const review = current?.extraction_review;
-    if (!current || !review || review.transcript !== current.note) return;
-    update({
-      [field]: review.suggestions[field].join("\n"),
-      extraction_review: {
-        ...review,
-        suggestions: { ...review.suggestions, [field]: [] },
-      },
-    });
   }
   async function start() {
     setError("");
@@ -419,16 +415,13 @@ export default function Capture() {
     setError("");
     try {
       await queue.current;
-      if (
-        latest.current.extraction_review &&
-        extractionFields.some(
-          (k) => latest.current!.extraction_review!.suggestions[k].length,
-        )
-      )
-        throw new Error(
-          "Review the suggested incident details or dismiss them before saving.",
-        );
-      const { audio, extraction_review: _review, ...report } = latest.current;
+      const {
+        audio,
+        extraction_review: _review,
+        extraction_auto: _auto,
+        extraction_manual: _manual,
+        ...report
+      } = latest.current;
       await store.saveReport({
         ...report,
         location: report.location.trim(),
@@ -570,8 +563,8 @@ export default function Capture() {
               <Text style={styles.label}>Voice observation</Text>
               <Text style={styles.body}>
                 Microphone audio stays local. Record up to 60 seconds, then
-                transcribe and suggest incident details. Review each suggestion
-                before using it. Prepare both models in Local AI first.
+                transcribe and fill incident details automatically. Review the fields
+                before saving. Prepare both models in Local AI first.
               </Text>
               <Text style={styles.body}>
                 {speechLabel || "Selected local speech model"}. Change model and
@@ -712,58 +705,18 @@ export default function Capture() {
               onChange={(issue) => update({ issue })}
             />
             <Button
-              title="Suggest incident details / retry"
+              title="Fill incident details / retry"
               secondary
               disabled={!!busy || recording || !draft.note.trim()}
               onPress={() => void suggest()}
             />
             {error && <Notice text={error} error />}
             <Text style={styles.body}>
-              Suggestions use your observation on this phone. Check counts,
-              negations and uncertainty. They describe what was reported.
+              Extraction fills the fields below on this phone. Check counts,
+              negations and uncertainty before saving. Manual edits are kept.
             </Text>
-            {draft.extraction_review && (
-              <View style={styles.card}>
-                <Text style={styles.label}>Review suggested details</Text>
-                <Text style={styles.body}>
-                  Short excerpts: people counts and units, hazards, and
-                  requested needs. Use a suggestion to fill its field, then edit
-                  it below before saving.
-                </Text>
-                {extractionFields.map((field) => (
-                  <View key={field} style={{ gap: 8 }}>
-                    <Text style={styles.label}>
-                      {field === "affected_people"
-                        ? "Affected people"
-                        : field === "hazards"
-                          ? "Observed hazards"
-                          : "Requested needs"}
-                    </Text>
-                    <Text selectable style={styles.body}>
-                      {draft.extraction_review!.suggestions[field].join("\n") ||
-                        "No pending suggestion. Leave unknown details blank."}
-                    </Text>
-                    {!!draft.extraction_review!.suggestions[field].length && (
-                      <Button
-                        title={
-                          draft[field]?.trim()
-                            ? "Replace current field with suggestion"
-                            : "Use suggestion"
-                        }
-                        secondary
-                        disabled={!!busy || recording}
-                        onPress={() => acceptSuggestion(field)}
-                      />
-                    )}
-                  </View>
-                ))}
-                <Button
-                  title="Dismiss remaining suggestions"
-                  secondary
-                  disabled={!!busy || recording}
-                  onPress={() => update({ extraction_review: undefined })}
-                />
-              </View>
+            {draft.extraction_auto && (
+              <Notice text="Incident details filled automatically. Review or edit the fields below before saving. Your manual entries are kept." />
             )}
             <Text style={styles.label}>Incident type</Text>
             <View style={styles.row}>
@@ -815,21 +768,21 @@ export default function Capture() {
               label="Affected people (confirmed count or description)"
               value={draft.affected_people || ""}
               disabled={!!busy || recording}
-              onChange={(affected_people) => update({ affected_people })}
+              onChange={(affected_people) => update({ affected_people }, true)}
             />
             <Field
               label="Observed hazards"
               multiline
               value={draft.hazards || ""}
               disabled={!!busy || recording}
-              onChange={(hazards) => update({ hazards })}
+              onChange={(hazards) => update({ hazards }, true)}
             />
             <Field
               label="Requested resources / needs"
               multiline
               value={draft.needs || ""}
               disabled={!!busy || recording}
-              onChange={(needs) => update({ needs })}
+              onChange={(needs) => update({ needs }, true)}
             />
             <Field
               label="Recorded follow-up (optional)"

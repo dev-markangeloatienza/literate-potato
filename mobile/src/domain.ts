@@ -42,6 +42,13 @@ export type Report = {
 export type Draft = Report & {
   audio?: string;
   extraction_review?: import("./extraction-domain").ExtractionReview;
+  extraction_auto?: {
+    transcript: string;
+    values: Partial<
+      Record<import("./extraction-domain").ExtractionField, string>
+    >;
+  };
+  extraction_manual?: import("./extraction-domain").ExtractionField[];
 };
 export type SummaryItem = {
   id: string;

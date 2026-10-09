@@ -6,12 +6,12 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.fieldbrief.mobile"
     },
-    "version": "1.2.3",
+    "version": "1.2.4",
     "orientation": "default",
     "icon": "./assets/icon.png",
     "android": {
       "allowBackup": false,
-      "versionCode": 6,
+      "versionCode": 7,
       "permissions": ["CAMERA", "RECORD_AUDIO"],
       "blockedPermissions": [
         "android.permission.READ_MEDIA_AUDIO",
