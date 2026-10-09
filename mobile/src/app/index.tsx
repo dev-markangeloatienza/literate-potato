@@ -65,6 +65,21 @@ export default function History() {
         contentContainerStyle={styles.content}
         ListHeaderComponent={
           <View style={{ gap: 20 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+              <Image
+                source={require("../../assets/bantay-icon.png")}
+                style={{ width: 52, height: 52, borderRadius: 10 }}
+                accessibilityLabel="Bantay Field beacon logo"
+              />
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={{ color: colors.ink, fontWeight: "800", fontSize: 23, letterSpacing: -0.6 }}
+                >
+                  Bantay Field
+                </Text>
+                <Text style={styles.eyebrow}>Ready beyond the signal</Text>
+              </View>
+            </View>
             <View style={styles.row}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.eyebrow}>Offline field assistant</Text>
@@ -90,19 +105,18 @@ export default function History() {
               ]}
             >
               <Text style={[styles.eyebrow, { color: colors.accent }]}>
-                Works where the signal doesn&apos;t
+                Your field notebook
               </Text>
               <Text style={{ fontSize: 23, fontWeight: "600", color: "white" }}>
-                Report when the cloud disappears.
+                Keep the situation in sight.
               </Text>
-              <Text style={{ color: "#D4DFD8", lineHeight: 22 }}>
+              <Text style={{ color: colors.inverseMuted, lineHeight: 22 }}>
                 Photos, incident details and resource requests stay on this
                 phone.
               </Text>
               <Button
                 title="New incident"
                 icon="add"
-                secondary
                 onPress={() => router.push("/capture")}
               />
             </View>

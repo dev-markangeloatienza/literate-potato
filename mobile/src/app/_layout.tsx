@@ -58,7 +58,7 @@ export default function Layout() {
           contentStyle: { backgroundColor: colors.bg },
         }}
       >
-        <Stack.Screen name="index" options={{ title: "FieldBrief" }} />
+        <Stack.Screen name="index" options={{ title: "Bantay Field" }} />
         <Stack.Screen
           name="capture"
           options={{ title: "Incident report", gestureEnabled: false }}

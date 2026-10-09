@@ -174,7 +174,7 @@ export function compile(reports: Report[], id: string, now: string): Summary {
 }
 export function summaryText(s: Summary) {
   return (
-    `FieldBrief · Compiled incident handover\n${s.created_at}\n\n` +
+    `Bantay Field · Compiled incident handover\n${s.created_at}\n\n` +
     s.items
       .map(
         (i) =>

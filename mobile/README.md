@@ -1,4 +1,4 @@
-# FieldBrief Mobile
+# Bantay Field Mobile
 
 Offline construction reports for Android. Native Expo / React Native app with SQLite persistence, app-owned photos, WAV capture and local Whisper transcription. Presentation target: Samsung Galaxy A55 SM-A556E, Android 16/API 36; actual offline device checks are recorded in the rehearsal checklist.
 
