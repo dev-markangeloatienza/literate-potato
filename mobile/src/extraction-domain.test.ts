@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   extractionPrompt,
+  extractionSchema,
   observationSentences,
   parseSuggestions,
 } from "./extraction-domain";
@@ -123,4 +124,89 @@ describe("focused excerpts", () => {
       ).toEqual([quote]);
     }
   });
+});
+
+describe("actual observation regression", () => {
+  const transcript =
+    "We're currently at the site where there's 12 families reported as affected and in badly need of water, food and clothing.";
+  it("allows reported counts and needs in the same sentence", () => {
+    expect(
+      parseSuggestions(
+        JSON.stringify({
+          affected_people: [{ sentence: 1, quote: "12 families" }],
+          hazards: [],
+          needs: [{ sentence: 1, quote: "water, food and clothing" }],
+        }),
+        transcript,
+      ),
+    ).toEqual({
+      affected_people: ["12 families"],
+      hazards: [],
+      needs: ["water, food and clothing"],
+    });
+  });
+  it("constrains decoding to exact source phrases and count units", () => {
+    const schema = extractionSchema(transcript);
+    expect(
+      schema.properties.affected_people.items.properties.quote.enum,
+    ).toEqual(["12 families"]);
+    expect(schema.properties.needs.items.properties.quote.enum).toContain(
+      "water, food and clothing",
+    );
+    expect(schema.properties.needs.items.properties.quote.enum).not.toContain(
+      "water, food, and clothing",
+    );
+    expect(
+      extractionSchema("Responder arrived.").properties.affected_people
+        .maxItems,
+    ).toBe(0);
+  });
+});
+
+describe("request category boundaries", () => {
+  const transcript =
+    "We're currently at the site where there's 12 families reported as affected and in badly need of water, food and clothing.";
+  it("does not classify requested supplies as hazards and retains the resource list", () => {
+    expect(
+      parseSuggestions(
+        JSON.stringify({
+          affected_people: [{ sentence: 1, quote: "12 families" }],
+          hazards: [{ sentence: 1, quote: "water" }],
+          needs: [{ sentence: 1, quote: "food" }],
+        }),
+        transcript,
+      ),
+    ).toEqual({
+      affected_people: ["12 families"],
+      hazards: [],
+      needs: ["water, food and clothing"],
+    });
+    const schema = extractionSchema(transcript);
+    expect(schema.properties.needs.items.properties.quote.enum).toEqual([
+      "water, food and clothing",
+    ]);
+    expect(schema.properties.hazards.items.properties.quote.enum).not.toContain(
+      "water",
+    );
+  });
+});
+
+it("retains explicit positive requests when the model omits needs", () => {
+  const empty = JSON.stringify({ affected_people: [], hazards: [], needs: [] });
+  expect(
+    parseSuggestions(
+      empty,
+      "12 families reported as affected and in badly need of water, food and clothing.",
+    ).needs,
+  ).toEqual(["water, food and clothing"]);
+  expect(
+    parseSuggestions(empty, "We do not need boats; we need drinking water.")
+      .needs,
+  ).toEqual(["drinking water"]);
+  expect(
+    parseSuggestions(empty, "Hindi kailangan ng rescue boat.").needs,
+  ).toEqual([]);
+  expect(parseSuggestions(empty, "We delivered food and water.").needs).toEqual(
+    [],
+  );
 });

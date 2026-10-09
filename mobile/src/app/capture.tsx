@@ -717,6 +717,7 @@ export default function Capture() {
               disabled={!!busy || recording || !draft.note.trim()}
               onPress={() => void suggest()}
             />
+            {error && <Notice text={error} error />}
             <Text style={styles.body}>
               Suggestions use your observation on this phone. Check counts,
               negations and uncertainty. They describe what was reported.
