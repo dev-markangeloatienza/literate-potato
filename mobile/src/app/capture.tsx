@@ -563,8 +563,8 @@ export default function Capture() {
               <Text style={styles.label}>Voice observation</Text>
               <Text style={styles.body}>
                 Microphone audio stays local. Record up to 60 seconds, then
-                transcribe and fill incident details automatically. Review the fields
-                before saving. Prepare both models in Local AI first.
+                transcribe and fill incident details automatically. Review the
+                fields before saving. Prepare both models in Local AI first.
               </Text>
               <Text style={styles.body}>
                 {speechLabel || "Selected local speech model"}. Change model and
@@ -728,7 +728,7 @@ export default function Capture() {
                     selected: (draft.incident_type || "Unspecified") === value,
                   }}
                   disabled={!!busy || recording}
-                  onPress={() => update({ incident_type: value })}
+                  onPress={() => update({ incident_type: value }, true)}
                   style={[
                     styles.chip,
                     (draft.incident_type || "Unspecified") === value &&
@@ -741,8 +741,9 @@ export default function Capture() {
             </View>
             <Text style={styles.label}>Responder-assessed priority</Text>
             <Text style={styles.body}>
-              Choose based on your assessment. Unknown details can remain blank;
-              the app does not assess structural safety.
+              Initially selected from your observation. Review and change based
+              on your assessment. Unknown details can remain blank; the app does
+              not assess structural safety.
             </Text>
             <View style={styles.row}>
               {priorities.map((value) => (
@@ -753,7 +754,7 @@ export default function Capture() {
                     selected: (draft.priority || "Unassessed") === value,
                   }}
                   disabled={!!busy || recording}
-                  onPress={() => update({ priority: value })}
+                  onPress={() => update({ priority: value }, true)}
                   style={[
                     styles.chip,
                     (draft.priority || "Unassessed") === value &&

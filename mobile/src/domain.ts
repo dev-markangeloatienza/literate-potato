@@ -2,6 +2,7 @@ export const statuses = ["Open", "In Progress", "Resolved"] as const;
 export type Status = (typeof statuses)[number];
 export const incidentTypes = [
   "Unspecified",
+  "Earthquake",
   "Flooding",
   "Damaged building",
   "Blocked road",
@@ -45,10 +46,10 @@ export type Draft = Report & {
   extraction_auto?: {
     transcript: string;
     values: Partial<
-      Record<import("./extraction-domain").ExtractionField, string>
+      Record<import("./incident-autofill").AutoField, string>
     >;
   };
-  extraction_manual?: import("./extraction-domain").ExtractionField[];
+  extraction_manual?: import("./incident-autofill").AutoField[];
 };
 export type SummaryItem = {
   id: string;
