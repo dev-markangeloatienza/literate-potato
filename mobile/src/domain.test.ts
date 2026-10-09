@@ -12,6 +12,70 @@ const report: Report = {
   updated_at: "2026-10-10",
 };
 describe("offline reports", () => {
+  it("preserves incident facts and coordinates in immutable handovers", () => {
+    const r: Report = {
+      ...report,
+      incident_type: "Flooding",
+      priority: "Urgent",
+      affected_people: "12 families",
+      hazards: "Live wires",
+      needs: "Drinking water",
+      coordinates: {
+        latitude: 14.6,
+        longitude: 121,
+        accuracy: 8,
+        captured_at: "2026-10-10T01:00:00Z",
+      },
+    };
+    const s = compile([r], "s", "now");
+    r.needs = "Changed";
+    r.coordinates!.latitude = 15;
+    const text = summaryText(s);
+    expect(text).toContain("Responder priority: Urgent");
+    expect(text).toContain("Affected people: 12 families");
+    expect(text).toContain("Observed hazards: Live wires");
+    expect(text).toContain("GPS: 14.6, 121");
+    expect(text).toContain("Requested resources: Drinking water");
+    expect(s.items.every((item) => item.source_report_ids[0] === r.id)).toBe(
+      true,
+    );
+  });
+  it("rejects invalid incident enums, oversized fields and GPS data", () => {
+    expect(() =>
+      validateReport({ ...report, priority: "Critical" as Report["priority"] }),
+    ).toThrow();
+    expect(() =>
+      validateReport({
+        ...report,
+        incident_type: "Unknown" as Report["incident_type"],
+      }),
+    ).toThrow();
+    expect(() =>
+      validateReport({ ...report, needs: "x".repeat(5001) }),
+    ).toThrow();
+    expect(() =>
+      validateReport({
+        ...report,
+        coordinates: {
+          latitude: 91,
+          longitude: 121,
+          accuracy: 5,
+          captured_at: "now",
+        },
+      }),
+    ).toThrow();
+    expect(() =>
+      validateReport({
+        ...report,
+        coordinates: {
+          latitude: 14,
+          longitude: 121,
+          accuracy: null,
+          captured_at: "2026-10-10T01:00:00Z",
+        },
+      }),
+    ).not.toThrow();
+  });
   it("ignores blank reviewed fields without rewriting the original observation", () => {
     const s = compile(
       [{ ...report, issue: "  ", follow_up: "  " }],

@@ -17,7 +17,8 @@ import * as Picker from "expo-image-picker";
 import { requestRecordingPermissionsAsync } from "expo-audio";
 import * as FS from "expo-file-system/legacy";
 import { randomUUID } from "expo-crypto";
-import { Draft, statuses } from "../domain";
+import { Draft, statuses, incidentTypes, priorities } from "../domain";
+import * as Location from "expo-location";
 import * as store from "../storage";
 import * as speech from "../speech";
 import { recorder } from "../../modules/field-recorder";
@@ -34,6 +35,7 @@ export default function Capture() {
     [seconds, setSeconds] = useState(0),
     [progress, setProgress] = useState(0),
     [recent, setRecent] = useState<string[]>([]);
+  const [speechLabel, setSpeechLabel] = useState("");
   const latest = useRef<Draft | null>(null),
     dirty = useRef(false),
     leaving = useRef(false),
@@ -44,7 +46,11 @@ export default function Capture() {
   useEffect(() => {
     let active = true;
     (async () => {
-      const rows = await store.reports();
+      const [rows, selected] = await Promise.all([
+        store.reports(),
+        speech.selection(),
+      ]);
+      if (active) setSpeechLabel(selected.model.name);
       setRecent([...new Set(rows.map((r) => r.location))].slice(0, 5));
       const saved = await store.setting<Draft>(id ? "draft:" + id : "draft");
       let value: Draft;
@@ -68,6 +74,76 @@ export default function Capture() {
       active = false;
     };
   }, [id]);
+  async function captureLocation() {
+    setError("");
+    setBusy("Finding GPS location…");
+    let subscription: Location.LocationSubscription | undefined;
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    let finished = false;
+    try {
+      const permission = await Location.requestForegroundPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert(
+          "Location access is off",
+          "Enter the barangay and landmark manually. You can enable location in Settings.",
+          [
+            { text: "OK" },
+            { text: "Settings", onPress: () => void Linking.openSettings() },
+          ],
+        );
+        return;
+      }
+      if (!(await Location.hasServicesEnabledAsync()))
+        throw new Error(
+          "Turn on device location or enter the location manually.",
+        );
+      const fix = await new Promise<Location.LocationObject>(
+        (resolve, reject) => {
+          timeout = setTimeout(
+            () =>
+              reject(
+                new Error(
+                  "No GPS fix within 20 seconds. Try outdoors or enter a location manually.",
+                ),
+              ),
+            20000,
+          );
+          void Location.watchPositionAsync(
+            {
+              accuracy: Location.Accuracy.High,
+              timeInterval: 1000,
+              mayShowUserSettingsDialog: false,
+            },
+            resolve,
+          ).then((sub) => {
+            subscription = sub;
+            if (finished || !mounted.current) sub.remove();
+          }, reject);
+        },
+      );
+      if (mounted.current)
+        update({
+          coordinates: {
+            latitude: fix.coords.latitude,
+            longitude: fix.coords.longitude,
+            accuracy: fix.coords.accuracy,
+            captured_at: new Date(fix.timestamp).toISOString(),
+          },
+        });
+    } catch (e) {
+      if (mounted.current)
+        setError(
+          e instanceof Error
+            ? e.message
+            : "GPS unavailable. Enter a location manually.",
+        );
+    } finally {
+      finished = true;
+      if (timeout) clearTimeout(timeout);
+      subscription?.remove();
+      if (mounted.current) setBusy("");
+    }
+  }
   function update(patch: Partial<Draft>) {
     if (!latest.current) return;
     const value = { ...latest.current, ...patch };
@@ -105,13 +181,15 @@ export default function Capture() {
     else leave();
   }
   const backRef = useRef(back);
+  const busyRef = useRef(busy);
+  busyRef.current = busy;
   useEffect(() => {
     backRef.current = back;
   });
   useEffect(() => {
     const remove = navigation.addListener("beforeRemove", (e) => {
       if (leaving.current) return;
-      if (dirty.current || recordingRef.current) {
+      if (dirty.current || recordingRef.current || busyRef.current) {
         e.preventDefault();
         backRef.current();
       }
@@ -373,13 +451,14 @@ export default function Capture() {
         contentContainerStyle={styles.content}
       >
         <Text style={styles.eyebrow}>
-          {id ? "Saved observation" : "New observation"}
+          {id ? "Saved incident" : "New incident"}
         </Text>
         <Text style={styles.title}>
           {draft?.location || "What did you find?"}
         </Text>
         <Text style={styles.body}>
-          A photo, a note, a clear next step. All on this phone.
+          Record the incident, observed hazards and requested resources. Saved
+          on this phone.
         </Text>
         {recovered && (
           <Notice text="Recovered your completed draft. Review it before saving." />
@@ -394,7 +473,7 @@ export default function Capture() {
                   <Image
                     source={{ uri: draft.photo }}
                     accessibilityLabel="Report photo evidence"
-                  resizeMode="contain"
+                    resizeMode="contain"
                     style={{ height: 240, borderRadius: 12, width: "100%" }}
                   />
                   <Button
@@ -435,6 +514,10 @@ export default function Capture() {
               <Text style={styles.body}>
                 Microphone audio stays local. Record up to 60 seconds, then
                 transcribe with Whisper.
+              </Text>
+              <Text style={styles.body}>
+                {speechLabel || "Selected local speech model"}. Change model and
+                language in Local AI before recording.
               </Text>
               <Button
                 title={
@@ -479,11 +562,49 @@ export default function Capture() {
               />
             )}
             <Field
-              label="Location *"
+              label="Barangay / location / landmark *"
               value={draft.location}
               disabled={!!busy || recording}
               onChange={(location) => update({ location })}
             />
+            <View style={styles.card}>
+              <Text style={styles.label}>GPS location (optional)</Text>
+              <Text style={styles.body}>
+                Tap below to allow a one-time location capture for this
+                incident. Coordinates stay on this phone. GPS may need an
+                outdoor view; no map or address lookup is required.
+              </Text>
+              <Button
+                title={
+                  draft.coordinates
+                    ? "Refresh GPS location"
+                    : "Capture GPS location"
+                }
+                secondary
+                icon="location-outline"
+                disabled={!!busy || recording}
+                onPress={() => void captureLocation()}
+              />
+              {draft.coordinates && (
+                <>
+                  <Text selectable style={styles.body}>
+                    {draft.coordinates.latitude.toFixed(6)},{" "}
+                    {draft.coordinates.longitude.toFixed(6)} · Accuracy:{" "}
+                    {draft.coordinates.accuracy === null
+                      ? "unknown"
+                      : `${Math.round(draft.coordinates.accuracy)} m`}
+                    {"\n"}Captured{" "}
+                    {new Date(draft.coordinates.captured_at).toLocaleString()}
+                  </Text>
+                  <Button
+                    title="Remove GPS location"
+                    secondary
+                    disabled={!!busy || recording}
+                    onPress={() => update({ coordinates: undefined })}
+                  />
+                </>
+              )}
+            </View>
             {recent.length > 0 && (
               <View style={styles.row}>
                 {recent.map((location) => (
@@ -515,11 +636,77 @@ export default function Capture() {
               }
             />
             <Field
-              label="Reviewed issue (optional)"
+              label="Reviewed incident description (optional)"
               multiline
               value={draft.issue}
               disabled={!!busy || recording}
               onChange={(issue) => update({ issue })}
+            />
+            <Text style={styles.label}>Incident type</Text>
+            <View style={styles.row}>
+              {incidentTypes.map((value) => (
+                <Pressable
+                  key={value}
+                  accessibilityRole="button"
+                  accessibilityState={{
+                    selected: (draft.incident_type || "Unspecified") === value,
+                  }}
+                  disabled={!!busy || recording}
+                  onPress={() => update({ incident_type: value })}
+                  style={[
+                    styles.chip,
+                    (draft.incident_type || "Unspecified") === value &&
+                      styles.chipActive,
+                  ]}
+                >
+                  <Text style={styles.label}>{value}</Text>
+                </Pressable>
+              ))}
+            </View>
+            <Text style={styles.label}>Responder-assessed priority</Text>
+            <Text style={styles.body}>
+              Choose based on your assessment. Unknown details can remain blank;
+              the app does not assess structural safety.
+            </Text>
+            <View style={styles.row}>
+              {priorities.map((value) => (
+                <Pressable
+                  key={value}
+                  accessibilityRole="button"
+                  accessibilityState={{
+                    selected: (draft.priority || "Unassessed") === value,
+                  }}
+                  disabled={!!busy || recording}
+                  onPress={() => update({ priority: value })}
+                  style={[
+                    styles.chip,
+                    (draft.priority || "Unassessed") === value &&
+                      styles.chipActive,
+                  ]}
+                >
+                  <Text style={styles.label}>{value}</Text>
+                </Pressable>
+              ))}
+            </View>
+            <Field
+              label="Affected people (confirmed count or description)"
+              value={draft.affected_people || ""}
+              disabled={!!busy || recording}
+              onChange={(affected_people) => update({ affected_people })}
+            />
+            <Field
+              label="Observed hazards"
+              multiline
+              value={draft.hazards || ""}
+              disabled={!!busy || recording}
+              onChange={(hazards) => update({ hazards })}
+            />
+            <Field
+              label="Requested resources / needs"
+              multiline
+              value={draft.needs || ""}
+              disabled={!!busy || recording}
+              onChange={(needs) => update({ needs })}
             />
             <Field
               label="Recorded follow-up (optional)"

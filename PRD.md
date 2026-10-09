@@ -1,5 +1,7 @@
 # Product Requirements Document: FieldBrief Mobile
 
+Disaster-response pivot authorized 2026-10-10: current first-slice scope is in `.agent-os/context/disaster-mvp.md`. Incident fields, foreground GPS and switchable multilingual speech supersede the construction-only and English-only non-goals below. LLM extraction, vision and server sync remain later slices. The requirements below remain the original implementation baseline.
+
 Revision: 2026-10-09. This document defines the planned native mobile rebuild. The existing web app is a working reference, not proof that native requirements are implemented or verified.
 
 ## 1. Product and Outcome

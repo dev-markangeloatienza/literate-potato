@@ -1,49 +1,54 @@
-﻿{
-    "expo":  {
-                 "scheme":  "fieldbrief",
-                 "slug":  "fieldbrief-mobile",
-                 "ios":  {
-                             "supportsTablet":  true,
-                             "bundleIdentifier":  "com.fieldbrief.mobile"
-                         },
-                 "version":  "1.0.0",
-                 "orientation":  "default",
-                 "icon":  "./assets/icon.png",
-                 "android":  {
-                                 "allowBackup":  false,
-                                 "versionCode":  1,
-                                 "permissions":  [
-                                                     "CAMERA",
-                                                     "RECORD_AUDIO"
-                                                 ],
-                                 "blockedPermissions":  [
-                                                            "android.permission.READ_MEDIA_AUDIO",
-                                                            "android.permission.READ_MEDIA_VIDEO",
-                                                            "android.permission.READ_MEDIA_IMAGES"
-                                                        ],
-                                 "package":  "com.fieldbrief.mobile"
-                             },
-                 "name":  "FieldBrief",
-                 "userInterfaceStyle":  "light",
-                 "plugins":  [
-                                 "expo-router",
-                                 "expo-sqlite",
-                                 [
-                                     "expo-image-picker",
-                                     {
-                                         "cameraPermission":  "FieldBrief uses your camera for local site evidence.",
-                                         "photosPermission":  "Choose a site photo for your local report.",
-                                         "microphonePermission":  "FieldBrief records your observation for on-device transcription."
-                                     }
-                                 ],
-                                 [
-                                     "expo-audio",
-                                     {
-                                         "microphonePermission":  "Record your observation for on-device transcription."
-                                     }
-                                 ],
-                                 "expo-font",
-                                 "expo-asset"
-                             ]
-             }
+{
+  "expo": {
+    "scheme": "fieldbrief",
+    "slug": "fieldbrief-mobile",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.fieldbrief.mobile"
+    },
+    "version": "1.1.0",
+    "orientation": "default",
+    "icon": "./assets/icon.png",
+    "android": {
+      "allowBackup": false,
+      "versionCode": 2,
+      "permissions": ["CAMERA", "RECORD_AUDIO"],
+      "blockedPermissions": [
+        "android.permission.READ_MEDIA_AUDIO",
+        "android.permission.READ_MEDIA_VIDEO",
+        "android.permission.READ_MEDIA_IMAGES"
+      ],
+      "package": "com.fieldbrief.mobile"
+    },
+    "name": "FieldBrief",
+    "userInterfaceStyle": "light",
+    "plugins": [
+      "expo-router",
+      "expo-sqlite",
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "FieldBrief uses your camera for local incident evidence.",
+          "photosPermission": "Choose a photo for your local incident report.",
+          "microphonePermission": "FieldBrief records your observation for on-device transcription."
+        }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Record your observation for on-device transcription."
+        }
+      ],
+      "expo-font",
+      "expo-asset",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Capture coordinates for a local incident report when you request it.",
+          "isAndroidBackgroundLocationEnabled": false,
+          "isAndroidForegroundServiceEnabled": false
+        }
+      ]
+    ]
+  }
 }

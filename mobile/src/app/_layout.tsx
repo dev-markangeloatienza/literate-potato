@@ -61,7 +61,7 @@ export default function Layout() {
         <Stack.Screen name="index" options={{ title: "FieldBrief" }} />
         <Stack.Screen
           name="capture"
-          options={{ title: "Site report", gestureEnabled: false }}
+          options={{ title: "Incident report", gestureEnabled: false }}
         />
         <Stack.Screen name="setup" options={{ title: "Local AI" }} />
         <Stack.Screen name="handover" options={{ title: "Handover" }} />

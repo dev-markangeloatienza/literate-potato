@@ -45,9 +45,17 @@ export default function History() {
   const data = all.filter(
     (r) =>
       (filter === "All" || r.status === filter) &&
-      [r.location, r.note, r.issue, r.follow_up].some((t) =>
-        t.toLowerCase().includes(query.toLowerCase()),
-      ),
+      [
+        r.location,
+        r.note,
+        r.issue,
+        r.follow_up,
+        r.incident_type || "",
+        r.priority || "",
+        r.affected_people || "",
+        r.hazards || "",
+        r.needs || "",
+      ].some((t) => t.toLowerCase().includes(query.toLowerCase())),
   );
   return (
     <View style={styles.page}>
@@ -59,8 +67,8 @@ export default function History() {
           <View style={{ gap: 20 }}>
             <View style={styles.row}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.eyebrow}>Your site, recorded</Text>
-                <Text style={styles.title}>Field reports</Text>
+                <Text style={styles.eyebrow}>Offline field assistant</Text>
+                <Text style={styles.title}>Incident reports</Text>
               </View>
               <Pressable
                 accessibilityRole="button"
@@ -85,20 +93,21 @@ export default function History() {
                 Works where the signal doesn&apos;t
               </Text>
               <Text style={{ fontSize: 23, fontWeight: "600", color: "white" }}>
-                Capture now. Hand over clearly.
+                Report when the cloud disappears.
               </Text>
               <Text style={{ color: "#D4DFD8", lineHeight: 22 }}>
-                Photos, observations and follow-ups stay on this phone.
+                Photos, incident details and resource requests stay on this
+                phone.
               </Text>
               <Button
-                title="New report"
+                title="New incident"
                 icon="add"
                 secondary
                 onPress={() => router.push("/capture")}
               />
             </View>
             {draft && (
-              <Notice text="You have an unfinished report. New report will reopen your saved draft." />
+              <Notice text="You have an unfinished report. New incident will reopen your saved draft." />
             )}
             <Button
               title={`Create handover · ${all.length} reports`}
@@ -108,7 +117,7 @@ export default function History() {
             />
             <TextInput
               accessibilityLabel="Search reports"
-              placeholder="Search location or observation"
+              placeholder="Search incidents, location or needs"
               placeholderTextColor={colors.muted}
               value={query}
               onChangeText={setQuery}
@@ -154,7 +163,7 @@ export default function History() {
                 <Image
                   source={{ uri: r.thumbnail }}
                   style={{ width: 68, height: 76, borderRadius: 10 }}
-                  accessibilityLabel="Site evidence thumbnail"
+                  accessibilityLabel="Incident evidence thumbnail"
                 />
               ) : (
                 <View style={{ width: 55, justifyContent: "center" }}>
@@ -175,6 +184,7 @@ export default function History() {
                   {r.issue || r.note || "Photo evidence"}
                 </Text>
                 <Text style={{ fontSize: 12, color: colors.muted }}>
+                  {r.priority ? `${r.priority} · ` : ""}
                   {new Date(r.created_at).toLocaleDateString()} · {r.status}
                 </Text>
               </View>
@@ -191,7 +201,7 @@ export default function History() {
               >
                 {all.length
                   ? "No matching reports"
-                  : "Your first observation starts here"}
+                  : "Your first incident starts here"}
               </Text>
               <Text style={styles.body}>
                 {all.length

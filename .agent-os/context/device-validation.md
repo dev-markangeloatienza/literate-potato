@@ -22,3 +22,13 @@ Do not infer untested failure/performance gates from these checks.
 Record OS/RAM/build type, runtime/model/artifact/hash/backend, download/load/first/repeat inference times, audio duration, cancellation response and failures. Speech target: 10-second recording within 15 seconds after preparation. This is a target, not an observed result.
 
 Hold-out speech observations should include construction vocabulary, site noise, worker accent, negated status and resolved work. Do not claim LLM extraction/briefing performance: those features are deferred.
+
+## Disaster slice validation (2026-10-10)
+
+Installed final standalone arm64 v1.1.0 (2); cold launch Status ok, 756 ms initial installation launch. Home displayed existing report count 1 and recovered draft. Native UI inspection via ADB UIAutomator confirmed incident title, manual barangay/landmark, optional GPS rationale/capture, responder priority, people/hazards/needs, follow-up/status/save. No user report/draft was edited or discarded.
+
+Selected English tiny.en in Local AI: existing file remained Verified. Real bundled JFK check returned correct text, 1.2 seconds total, CPU. Force-stop and cold setup launch retained selected English model. Switched to multilingual tiny: Not ready as expected. Attempted explicit download failed with phone DNS unable to resolve huggingface.co. App displayed error and retained English file. Restored English selection so current voice capture remains usable; Home left open. Airplane/Wi-Fi settings were not changed (airplane=0, Wi-Fi=1 when inspected), so this new runtime check is not a new airplane-mode benchmark.
+
+Packaged aapt2 permissions confirm fine/coarse foreground location, camera and microphone, with no background location. Generated manifest assertions passed. Typecheck/lint clean, 25 tests, Expo doctor 21/21; release builds passed including final rebundle after navigation fix.
+
+Outstanding physical gates: connect phone to working internet; select/download multilingual tiny/base and verify hashes; compare live Taglish recordings (names/counts/negations/noise) with auto/tl settings; cold restart and retry/cancel each model; test GPS permission denial, approximate accuracy, no fix/timeout and outdoor fix; enter/reopen incident fields and share handover; airplane-mode full capture journey. Never represent the English sample as Taglish evidence.
