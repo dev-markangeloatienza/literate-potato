@@ -725,8 +725,9 @@ export default function Capture() {
               <View style={styles.card}>
                 <Text style={styles.label}>Review suggested details</Text>
                 <Text style={styles.body}>
-                  Excerpts from the observation. Use a suggestion to fill its
-                  field, then edit it below before saving.
+                  Short excerpts: people counts and units, hazards, and
+                  requested needs. Use a suggestion to fill its field, then edit
+                  it below before saving.
                 </Text>
                 {extractionFields.map((field) => (
                   <View key={field} style={{ gap: 8 }}>

@@ -5,7 +5,8 @@ const state = vi.hoisted(() => ({
   release: vi.fn(),
   stop: vi.fn(),
   init: vi.fn(),
-  output: '{"affected_people":[1],"hazards":[],"needs":[]}',
+  output:
+    '{"affected_people":[{"sentence":1,"quote":"12 families"}],"hazards":[],"needs":[]}',
   limit: 0,
   failLoad: false,
   corruptDownload: false,
@@ -75,7 +76,8 @@ beforeEach(() => {
   state.tokens = 10;
   state.corruptDownload = false;
   state.duringLoad = undefined;
-  state.output = '{"affected_people":[1],"hazards":[],"needs":[]}';
+  state.output =
+    '{"affected_people":[{"sentence":1,"quote":"12 families"}],"hazards":[],"needs":[]}';
 });
 describe("local extraction lifecycle", () => {
   it("requires explicit preparation and never fabricates a fallback", async () => {
@@ -89,7 +91,7 @@ describe("local extraction lifecycle", () => {
   it("uses CPU and constrained output then releases the model", async () => {
     await extraction.prepare(() => {});
     expect(await extraction.extract("12 families affected.")).toEqual({
-      affected_people: ["12 families affected."],
+      affected_people: ["12 families"],
       hazards: [],
       needs: [],
     });
