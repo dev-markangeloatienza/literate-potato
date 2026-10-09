@@ -1,5 +1,7 @@
 # Decisions
 
+2026-10-10 — User authorized automatic affected-people/hazards/needs extraction from audio. Keep all processing local: Whisper transcript followed by Qwen3 0.6B Q4_0 (428,970,080 bytes) using llama.rn 0.12.9 on CPU. Small-model accuracy is a measurement gate. Classify schema-constrained sentence IDs and copy whole original sentences rather than calculated counts, translations or generated summaries; unknown arrays stay empty. Suggestions remain separate until responder accepts each category; manual fields are not silently overwritten. Validate IDs against original observation sentences; malformed, ungrounded and incomplete output fails visibly with transcript retained. This prevents invented output text but does not prove correct categorization or preserved semantic context.
+
 2026-10-10 — Android-first native Expo build targeting user's Samsung A55. Native inference needs a custom build rather than Expo Go or a browser fallback. No existing app code was present to reuse.
 
 2026-10-10 — Use Whisper tiny.en unquantized GGML, whisper.rn 0.7.4, CPU explicitly. Download 77.7 MB once with fixed repository revision and SHA-256. Device accuracy/performance remains a measurement gate; no NPU speed claim. Optional LLM extraction/generation remains deferred as allowed by PRD priority.

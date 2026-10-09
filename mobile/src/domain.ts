@@ -39,7 +39,10 @@ export type Report = {
   needs?: string;
   coordinates?: Coordinates;
 };
-export type Draft = Report & { audio?: string };
+export type Draft = Report & {
+  audio?: string;
+  extraction_review?: import("./extraction-domain").ExtractionReview;
+};
 export type SummaryItem = {
   id: string;
   section: "issues_by_location" | "work_list";

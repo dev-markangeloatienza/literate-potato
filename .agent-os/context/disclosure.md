@@ -1,5 +1,13 @@
 # Shipped model and tooling disclosure
 
+## Incident extraction (1.2.0)
+
+- Qwen3 0.6B, GGUF Q4_0, 428,970,080 bytes; Qwen model license Apache 2.0. Source: https://huggingface.co/ggml-org/Qwen3-0.6B-GGUF and https://huggingface.co/Qwen/Qwen3-0.6B.
+- Pinned host revision `b5f37287796e5be0ea3dab2e7430873fb3f73e49`; file `Qwen3-0.6B-Q4_0.gguf`; SHA-256 `da2572f16c06133561ce56accaa822216f2391ef4d37fba427801cd6736417d4`, verified against Hugging Face LFS metadata on 2026-10-10.
+- Native runtime llama.rn 0.12.9 (MIT), llama.cpp (MIT), CPU selected explicitly. Reference: https://github.com/mybigday/llama.rn/tree/v0.12.9. Pinned native archives are downloaded with package-provided checksums by the Android build script; Windows System32 tar avoids Git tar misreading drive-letter paths.
+- One explicit model download; transcript inference is local with no network fallback. Models are loaded sequentially and released. Three excerpt categories require responder acceptance; missing details stay blank. Exact text matching rejects newly invented wording but cannot establish that an excerpt is correctly classified or retains every qualification. No structural safety assessment or automatic priority assignment.
+- Setup's extraction check uses explicitly labeled typed Taglish test content. It neither records audio nor creates a report. Physical microphone/noise/Taglish accuracy and other device classes require separate evaluation.
+
 ## Speech
 
 - Model: OpenAI Whisper tiny.en, English, GGML `ggml-tiny.en.bin`, unquantized artifact, 77,704,715 bytes.

@@ -1,6 +1,10 @@
 # Project context
 
-FieldBrief Mobile is pivoting to an offline disaster-response field assistant, Android-first on the Samsung A55. One responder/device, no login or sync in this first slice. User authorized incident capture, multilingual speech, GPS and incident handovers, and requested model switching. Original construction PRD is the baseline; disaster scope is in disaster-mvp.md. Local LLM extraction, vision tagging and queued server sync remain subsequent work.
+2026-10-10 extraction implementation: owner Codex, branch feature/audio-incident-extraction. Local Qwen3 0.6B Q4_0 classification now follows Whisper transcription; valid sentence IDs map to whole original statements for affected_people/hazards/needs. Suggestions require responder acceptance, preserve manual fields, recover with drafts and clear when observation changes. Optional explicit 429 MB model download; no cloud fallback. Existing report/snapshot JSON format retained.
+
+Final v1.2.0 (3) built/installed on A55 and extraction model verified. Offline typed Taglish/negation/unknown fixtures, cancel/retry and existing speech sample verified; 45 tests/typecheck/lint/Expo doctor clean. Phone left at Home, Wi-Fi restored, two user reports and unfinished draft available. Live microphone-to-review/save accuracy, broader field language/noise/device quality and thermal endurance remain unverified. See device-validation.md for scope and timings.
+
+FieldBrief Mobile is pivoting to an offline disaster-response field assistant, Android-first on the Samsung A55. One responder/device, no login or sync in this first slice. User authorized incident capture, multilingual speech, GPS and incident handovers, and requested model switching. Original construction PRD is the baseline; disaster scope is in disaster-mvp.md. Local LLM extraction now ships on feature/audio-incident-extraction; vision tagging and queued server sync remain subsequent work.
 
 2026-10-10: Created native Expo app under mobile/. Android presentation target Samsung A55 SM-A556E, Android 16/API 36, MemTotal 7,606,432 kB, /data ~63 GB free. USB serial RRCX704Y83A authorized after reconnect. Owner: Codex; branch feature/fieldbrief-mobile. No remote configured; no publication requested.
 

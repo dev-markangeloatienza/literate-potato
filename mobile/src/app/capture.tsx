@@ -21,6 +21,8 @@ import { Draft, statuses, incidentTypes, priorities } from "../domain";
 import * as Location from "expo-location";
 import * as store from "../storage";
 import * as speech from "../speech";
+import * as extraction from "../extraction";
+import { extractionFields, ExtractionField } from "../extraction-domain";
 import { recorder } from "../../modules/field-recorder";
 import { Button, Busy, Field, Notice, styles, colors } from "../ui";
 
@@ -147,6 +149,8 @@ export default function Capture() {
   function update(patch: Partial<Draft>) {
     if (!latest.current) return;
     const value = { ...latest.current, ...patch };
+    if (patch.note !== undefined && patch.note !== latest.current.note)
+      value.extraction_review = undefined;
     latest.current = value;
     dirty.current = true;
     setDraft(value);
@@ -162,7 +166,7 @@ export default function Capture() {
   }
   function back() {
     if (recordingRef.current || busy) {
-      setError("Stop recording or cancel transcription before leaving.");
+      setError("Stop recording or cancel processing before leaving.");
       return;
     }
     const leave = () => {
@@ -251,6 +255,7 @@ export default function Capture() {
         if (recordingRef.current) void stopRef.current(false);
         operationState.generation++;
         void speech.cancel();
+        void extraction.cancel();
       }
     });
     return () => {
@@ -258,6 +263,7 @@ export default function Capture() {
       sub.remove();
       operationState.generation++;
       void speech.cancel();
+      void extraction.cancel();
       if (recordingRef.current) void recorder?.stop();
     };
   }, []);
@@ -285,6 +291,7 @@ export default function Capture() {
         original === latest.current?.note
       ) {
         update({ note: text, transcription_source: "voice" });
+        await collectSuggestions(text, token);
       }
     } catch (e) {
       if (mounted.current)
@@ -296,6 +303,47 @@ export default function Capture() {
     } finally {
       if (mounted.current) setBusy("");
     }
+  }
+  async function collectSuggestions(text: string, token: number) {
+    setBusy("Suggesting incident details on this phone · CPU");
+    const suggestions = await extraction.extract(text);
+    if (
+      mounted.current &&
+      token === operation.current.generation &&
+      latest.current?.note === text
+    )
+      update({ extraction_review: { transcript: text, suggestions } });
+  }
+  async function suggest() {
+    const text = latest.current?.note;
+    if (!text) return;
+    const token = ++operation.current.generation;
+    setError("");
+    update({ extraction_review: undefined });
+    try {
+      await collectSuggestions(text, token);
+    } catch (e) {
+      if (mounted.current)
+        setError(
+          e instanceof Error
+            ? e.message
+            : "Extraction failed. Your observation is retained.",
+        );
+    } finally {
+      if (mounted.current) setBusy("");
+    }
+  }
+  function acceptSuggestion(field: ExtractionField) {
+    const current = latest.current;
+    const review = current?.extraction_review;
+    if (!current || !review || review.transcript !== current.note) return;
+    update({
+      [field]: review.suggestions[field].join("\n"),
+      extraction_review: {
+        ...review,
+        suggestions: { ...review.suggestions, [field]: [] },
+      },
+    });
   }
   async function start() {
     setError("");
@@ -371,7 +419,16 @@ export default function Capture() {
     setError("");
     try {
       await queue.current;
-      const { audio, ...report } = latest.current;
+      if (
+        latest.current.extraction_review &&
+        extractionFields.some(
+          (k) => latest.current!.extraction_review!.suggestions[k].length,
+        )
+      )
+        throw new Error(
+          "Review the suggested incident details or dismiss them before saving.",
+        );
+      const { audio, extraction_review: _review, ...report } = latest.current;
       await store.saveReport({
         ...report,
         location: report.location.trim(),
@@ -513,7 +570,8 @@ export default function Capture() {
               <Text style={styles.label}>Voice observation</Text>
               <Text style={styles.body}>
                 Microphone audio stays local. Record up to 60 seconds, then
-                transcribe with Whisper.
+                transcribe and suggest incident details. Review each suggestion
+                before using it. Prepare both models in Local AI first.
               </Text>
               <Text style={styles.body}>
                 {speechLabel || "Selected local speech model"}. Change model and
@@ -558,6 +616,17 @@ export default function Capture() {
                   operation.current.generation++;
                   setBusy("Cancelling transcription…");
                   void speech.cancel();
+                }}
+              />
+            )}
+            {busy.startsWith("Suggesting") && (
+              <Button
+                title="Cancel extraction"
+                secondary
+                onPress={() => {
+                  operation.current.generation++;
+                  setBusy("Cancelling extraction…");
+                  void extraction.cancel();
                 }}
               />
             )}
@@ -642,6 +711,58 @@ export default function Capture() {
               disabled={!!busy || recording}
               onChange={(issue) => update({ issue })}
             />
+            <Button
+              title="Suggest incident details / retry"
+              secondary
+              disabled={!!busy || recording || !draft.note.trim()}
+              onPress={() => void suggest()}
+            />
+            <Text style={styles.body}>
+              Suggestions use your observation on this phone. Check counts,
+              negations and uncertainty. They describe what was reported.
+            </Text>
+            {draft.extraction_review && (
+              <View style={styles.card}>
+                <Text style={styles.label}>Review suggested details</Text>
+                <Text style={styles.body}>
+                  Excerpts from the observation. Use a suggestion to fill its
+                  field, then edit it below before saving.
+                </Text>
+                {extractionFields.map((field) => (
+                  <View key={field} style={{ gap: 8 }}>
+                    <Text style={styles.label}>
+                      {field === "affected_people"
+                        ? "Affected people"
+                        : field === "hazards"
+                          ? "Observed hazards"
+                          : "Requested needs"}
+                    </Text>
+                    <Text selectable style={styles.body}>
+                      {draft.extraction_review!.suggestions[field].join("\n") ||
+                        "No pending suggestion. Leave unknown details blank."}
+                    </Text>
+                    {!!draft.extraction_review!.suggestions[field].length && (
+                      <Button
+                        title={
+                          draft[field]?.trim()
+                            ? "Replace current field with suggestion"
+                            : "Use suggestion"
+                        }
+                        secondary
+                        disabled={!!busy || recording}
+                        onPress={() => acceptSuggestion(field)}
+                      />
+                    )}
+                  </View>
+                ))}
+                <Button
+                  title="Dismiss remaining suggestions"
+                  secondary
+                  disabled={!!busy || recording}
+                  onPress={() => update({ extraction_review: undefined })}
+                />
+              </View>
+            )}
             <Text style={styles.label}>Incident type</Text>
             <View style={styles.row}>
               {incidentTypes.map((value) => (
