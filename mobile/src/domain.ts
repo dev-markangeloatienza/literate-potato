@@ -1,5 +1,25 @@
 export const statuses = ["Open", "In Progress", "Resolved"] as const;
 export type Status = (typeof statuses)[number];
+export const incidentTypes = [
+  "Unspecified",
+  "Flooding",
+  "Damaged building",
+  "Blocked road",
+  "Landslide",
+  "Other",
+] as const;
+export const priorities = [
+  "Unassessed",
+  "Routine",
+  "Urgent",
+  "Immediate",
+] as const;
+export type Coordinates = {
+  latitude: number;
+  longitude: number;
+  accuracy: number | null;
+  captured_at: string;
+};
 export type Report = {
   id: string;
   location: string;
@@ -12,6 +32,12 @@ export type Report = {
   transcription_source: "typed" | "voice" | "voice_edited";
   created_at: string;
   updated_at: string;
+  incident_type?: (typeof incidentTypes)[number];
+  priority?: (typeof priorities)[number];
+  affected_people?: string;
+  hazards?: string;
+  needs?: string;
+  coordinates?: Coordinates;
 };
 export type Draft = Report & { audio?: string };
 export type SummaryItem = {
@@ -34,6 +60,31 @@ export function validateReport(r: Report) {
   if (!r.note.trim() && !r.photo)
     throw new Error("Add a photo or an observation before saving.");
   if (!statuses.includes(r.status)) throw new Error("Choose a valid status.");
+  if (r.incident_type !== undefined && !incidentTypes.includes(r.incident_type))
+    throw new Error("Choose a valid incident type.");
+  if (r.priority !== undefined && !priorities.includes(r.priority))
+    throw new Error("Choose a valid priority.");
+  if (
+    [r.affected_people, r.hazards, r.needs].some(
+      (v) => v !== undefined && (typeof v !== "string" || v.length > 5000),
+    )
+  )
+    throw new Error(
+      "Incident fields must be text of at most 5,000 characters.",
+    );
+  if (r.coordinates) {
+    const c = r.coordinates;
+    if (
+      !Number.isFinite(c.latitude) ||
+      Math.abs(c.latitude) > 90 ||
+      !Number.isFinite(c.longitude) ||
+      Math.abs(c.longitude) > 180 ||
+      (c.accuracy !== null &&
+        (!Number.isFinite(c.accuracy) || c.accuracy < 0)) ||
+      !Number.isFinite(Date.parse(c.captured_at))
+    )
+      throw new Error("Invalid GPS location. Capture it again or remove it.");
+  }
   if (
     r.note.length > 20000 ||
     r.location.length > 200 ||
@@ -60,6 +111,42 @@ export function compile(reports: Report[], id: string, now: string): Summary {
         location: r.location,
         source_report_ids: [r.id],
       },
+      ...(r.incident_type ||
+      r.priority ||
+      r.affected_people?.trim() ||
+      r.hazards?.trim() ||
+      r.coordinates
+        ? [
+            {
+              id: `${i}-incident`,
+              section: "issues_by_location" as const,
+              text: [
+                r.incident_type && `Incident: ${r.incident_type}`,
+                r.priority && `Responder priority: ${r.priority}`,
+                r.affected_people?.trim() &&
+                  `Affected people: ${r.affected_people}`,
+                r.hazards?.trim() && `Observed hazards: ${r.hazards}`,
+                r.coordinates &&
+                  `GPS: ${r.coordinates.latitude}, ${r.coordinates.longitude} · Accuracy: ${r.coordinates.accuracy === null ? "unknown" : `${r.coordinates.accuracy} m`} · Captured: ${r.coordinates.captured_at}`,
+              ]
+                .filter(Boolean)
+                .join("\n"),
+              location: r.location,
+              source_report_ids: [r.id],
+            },
+          ]
+        : []),
+      ...(r.needs?.trim()
+        ? [
+            {
+              id: `${i}-needs`,
+              section: "work_list" as const,
+              text: `Requested resources: ${r.needs}`,
+              location: r.location,
+              source_report_ids: [r.id],
+            },
+          ]
+        : []),
       ...(r.follow_up.trim()
         ? [
             {
@@ -76,11 +163,11 @@ export function compile(reports: Report[], id: string, now: string): Summary {
 }
 export function summaryText(s: Summary) {
   return (
-    `FieldBrief · Compiled handover\n${s.created_at}\n\n` +
+    `FieldBrief · Compiled incident handover\n${s.created_at}\n\n` +
     s.items
       .map(
         (i) =>
-          `${i.section === "work_list" ? "Recorded follow-up" : "Observation"} · ${i.location}\n${i.text}\nSource: ${i.source_report_ids.join(", ")}`,
+          `${i.section === "work_list" ? "Needs / recorded follow-up" : "Incident observation"} · ${i.location}\n${i.text}\nSource: ${i.source_report_ids.join(", ")}`,
       )
       .join("\n\n")
   );

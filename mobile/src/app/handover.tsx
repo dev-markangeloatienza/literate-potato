@@ -55,11 +55,12 @@ export default function Handover() {
   }
   return (
     <ScrollView style={styles.page} contentContainerStyle={styles.content}>
-      <Text style={styles.eyebrow}>From observation to handover</Text>
-      <Text style={styles.title}>Bring the site together.</Text>
+      <Text style={styles.eyebrow}>From incident to handover</Text>
+      <Text style={styles.title}>Brief the response team.</Text>
       <Text style={styles.body}>
         Select reports to compile exact saved observations, statuses and
-        recorded follow-ups. Every item links back to its source.
+        hazards, needs and recorded follow-ups. Every item links back to its
+        source.
       </Text>
       <Notice text="Compiled handover · No AI rewriting · No model or connection required" />
       {error && (

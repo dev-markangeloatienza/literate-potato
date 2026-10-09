@@ -28,7 +28,7 @@ export default function Briefing() {
   return (
     <ScrollView style={styles.page} contentContainerStyle={styles.content}>
       <Text style={styles.eyebrow}>Immutable snapshot · Compiled</Text>
-      <Text style={styles.title}>Site handover</Text>
+      <Text style={styles.title}>Incident handover</Text>
       {error && <Notice text={error} error />}
       {!summary && !error && <Busy text="Opening local snapshot…" />}
       {summary && (
@@ -42,7 +42,7 @@ export default function Briefing() {
             <View key={section} style={{ gap: 12 }}>
               <Text style={styles.eyebrow}>
                 {section === "work_list"
-                  ? "Recorded follow-ups"
+                  ? "Needs & recorded follow-ups"
                   : "Observations by location"}
               </Text>
               {summary.items

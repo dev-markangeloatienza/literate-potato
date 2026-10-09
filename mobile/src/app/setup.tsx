@@ -6,7 +6,16 @@ import * as speech from "../speech";
 import { setting } from "../storage";
 import { Button, Busy, Notice, styles, colors } from "../ui";
 import { router } from "expo-router";
+import {
+  artifact,
+  speechModels,
+  speechLanguages,
+  SpeechLanguage,
+  SpeechModelId,
+} from "../speech-models";
 export default function Setup() {
+  const [model, setModel] = useState(artifact(speechModels[0]));
+  const [language, setLanguage] = useState<SpeechLanguage>("auto");
   const [ready, setReady] = useState(false),
     [busy, setBusy] = useState("Checking local model…"),
     [progress, setProgress] = useState(0),
@@ -17,18 +26,22 @@ export default function Setup() {
       elapsed_ms: number;
       at: string;
       kind?: string;
+      model?: string;
     } | null>(null);
   useEffect(() => {
     let alive = true;
     Promise.all([
-      speech.readiness(),
+      speech.selection(),
       FS.getFreeDiskStorageAsync(),
       setting<{ elapsed_ms: number; at: string; kind?: string }>(
         "speech-benchmark",
       ),
     ])
-      .then(([r, f, b]) => {
+      .then(async ([selection, f, b]) => {
+        const r = await speech.readiness(selection.model.id);
         if (alive) {
+          setModel(selection.model);
+          setLanguage(selection.language);
           setReady(r);
           setFree(f);
           setBenchmark(b);
@@ -45,6 +58,33 @@ export default function Setup() {
       void speech.cancel();
     };
   }, []);
+  async function switchModel(id: SpeechModelId) {
+    setBusy("Checking selected model…");
+    setError("");
+    setCheckText("");
+    try {
+      await speech.selectModel(id);
+      setModel((await speech.selection()).model);
+      setReady(await speech.readiness(id));
+    } catch (e) {
+      setReady(false);
+      setError(e instanceof Error ? e.message : "Could not switch model.");
+    } finally {
+      setBusy("");
+    }
+  }
+  async function switchLanguage(value: SpeechLanguage) {
+    setBusy("Saving speech language…");
+    setError("");
+    try {
+      await speech.selectLanguage(value);
+      setLanguage(value);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not change language.");
+    } finally {
+      setBusy("");
+    }
+  }
   async function prepare() {
     setBusy("Downloading and verifying…");
     setError("");
@@ -94,9 +134,42 @@ export default function Setup() {
         onPress={() => router.replace("/")}
       />
       <Text style={styles.body}>
-        Download the English speech model while connected. After verification,
+        Choose and download a speech model while connected. After verification,
         audio is processed locally using native whisper.cpp on CPU.
       </Text>
+      <View style={styles.card}>
+        <Text style={styles.label}>Speech model</Text>
+        {speechModels.map((m) => (
+          <View key={m.id} style={{ gap: 8 }}>
+            <Button
+              title={`${model.id === m.id ? "Selected · " : ""}${m.name} · ${(m.bytes / 1e6).toFixed(1)} MB`}
+              secondary
+              disabled={!!busy || model.id === m.id}
+              onPress={() => void switchModel(m.id)}
+            />
+            <Text style={styles.body}>{m.description}</Text>
+          </View>
+        ))}
+        <Text style={styles.body}>
+          Downloaded models are kept separately. Switching does not download
+          automatically. Prepare the selected model before going offline.
+        </Text>
+        <Text style={styles.label}>Spoken language</Text>
+        {speechLanguages.map((value) => (
+          <Button
+            key={value}
+            title={`${language === value ? "Selected · " : ""}${value === "auto" ? "Auto-detect" : value === "tl" ? "Filipino / Taglish" : "English"}`}
+            secondary
+            disabled={!!busy || !model.multilingual || language === value}
+            onPress={() => void switchLanguage(value)}
+          />
+        ))}
+        <Text style={styles.body}>
+          {model.multilingual
+            ? "Taglish accuracy is unverified. Compare models with your own recordings and review names, numbers and needs."
+            : "English-only model always uses English. Your multilingual language preference is retained."}
+        </Text>
+      </View>
       <View style={styles.card}>
         <View style={styles.row}>
           <Text
@@ -107,14 +180,17 @@ export default function Setup() {
               flex: 1,
             }}
           >
-            {speech.model.name}
+            {model.name}
           </Text>
           <Text style={styles.label}>{ready ? "Verified" : "Not ready"}</Text>
         </View>
-        <Text style={styles.body}>77.7 MB · English · GGML · unquantized</Text>
         <Text style={styles.body}>
-          Available storage: {(free / 1e9).toFixed(1)} GB. Allow at least 190 MB
-          for preparation.
+          {(model.bytes / 1e6).toFixed(1)} MB ·{" "}
+          {model.multilingual ? "Multilingual" : "English"} · GGML · unquantized
+        </Text>
+        <Text style={styles.body}>
+          Available storage: {(free / 1e9).toFixed(1)} GB. Allow at least{" "}
+          {Math.ceil((model.bytes * 2 + 30_000_000) / 1e6)} MB for preparation.
         </Text>
         {busy && (
           <Busy
@@ -146,8 +222,8 @@ export default function Setup() {
         <Text style={styles.label}>Verify native speech</Text>
         <Text style={styles.body}>
           Run an 11-second bundled English recording through the real local
-          model. This is a labeled test sample, separate from your site
-          observations.
+          model. This is an English runtime check, not a Taglish accuracy test,
+          separate from your observations.
         </Text>
         <Button
           title="Run local speech check"
@@ -176,7 +252,7 @@ export default function Setup() {
         <Text style={styles.label}>Latest phone measurement</Text>
         <Text style={styles.body}>
           {benchmark
-            ? `${(benchmark.elapsed_ms / 1000).toFixed(1)} seconds · CPU · ${benchmark.kind === "bundled_check" ? "Bundled check" : "Recording"} · ${new Date(benchmark.at).toLocaleString()}`
+            ? `${(benchmark.elapsed_ms / 1000).toFixed(1)} seconds · ${benchmark.model || "Previous model"} · CPU · ${benchmark.kind === "bundled_check" ? "Bundled check" : "Recording"} · ${new Date(benchmark.at).toLocaleString()}`
             : "No transcription measured on this installation yet."}
         </Text>
         <Text style={styles.body}>
@@ -203,7 +279,7 @@ export default function Setup() {
           selectable
           style={{ fontSize: 11, lineHeight: 17, color: colors.muted }}
         >
-          Artifact SHA-256: {speech.model.sha256}
+          Artifact SHA-256: {model.sha256}
         </Text>
       </View>
     </ScrollView>

@@ -13,3 +13,5 @@
 2026-10-10 — Move full model-file SHA-256 verification from pure JavaScript to streaming native MessageDigest, preserving the fixed hash check before each run. Same 11-second offline A55 sample improved from 35.6 seconds total to 1.1 seconds including verification/load/inference. One device/sample result; no cloud comparison or broad accent/accuracy claim.
 
 2026-10-10 — Root navigation declares index as the initial route for deep links; Local AI also provides an explicit Back to reports action. A cold setup deep link otherwise left the user without a Home/back stack.
+
+2026-10-10 ? User authorized disaster-response pivot and switchable models. Keep existing Android storage/capture architecture and optional JSON fields for backwards compatibility. Offer multilingual tiny/base alongside the English artifact, fixed hashes checked against Hugging Face revision metadata. Default to multilingual tiny; explicit download and language setting, no translation or cloud fallback. Preserve original transcript; incident priority is responder-entered, not AI-assigned. Native LLM/vision/sync are later slices rather than claims about this build.

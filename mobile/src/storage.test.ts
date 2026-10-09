@@ -82,6 +82,26 @@ describe("SQLite durability and media ownership", () => {
     expect(await store.reports()).toEqual([report]);
     expect(await store.setting("draft")).toBeNull();
   });
+  it("round-trips incident metadata and preserves it in recovered drafts", async () => {
+    const incident: Report = {
+      ...report,
+      incident_type: "Flooding",
+      priority: "Urgent",
+      needs: "Water",
+      affected_people: "12 families",
+      hazards: "Debris",
+      coordinates: {
+        latitude: 14.6,
+        longitude: 121,
+        accuracy: null,
+        captured_at: "2026-10-10T01:00:00Z",
+      },
+    };
+    await store.setSetting("draft", incident);
+    expect(await store.setting("draft")).toEqual(incident);
+    await store.saveReport(incident);
+    expect((await store.reports())[0]).toEqual(incident);
+  });
   it("editing one report cannot clear another capture draft", async () => {
     const other = { ...report, id: "b" };
     await store.setSetting("draft", other);
