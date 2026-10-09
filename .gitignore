@@ -10,3 +10,7 @@ artifacts/
 .env*
 mobile/modules/**/android/build/
 mobile/modules/**/android/.gradle/
+.claude/
+.codex/
+.agents/
+.agent-os/
