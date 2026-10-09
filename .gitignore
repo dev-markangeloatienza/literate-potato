@@ -14,3 +14,8 @@ mobile/modules/**/android/.gradle/
 .codex/
 .agents/
 .agent-os/
+PRD.md
+AGENTS.md
+CLAUDE.md
+PROJECT_SUMMARY.md
+PITCH.md

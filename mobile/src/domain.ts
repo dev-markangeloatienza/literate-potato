@@ -2,6 +2,7 @@ export const statuses = ["Open", "In Progress", "Resolved"] as const;
 export type Status = (typeof statuses)[number];
 export const incidentTypes = [
   "Unspecified",
+  "Earthquake",
   "Flooding",
   "Damaged building",
   "Blocked road",
@@ -39,7 +40,17 @@ export type Report = {
   needs?: string;
   coordinates?: Coordinates;
 };
-export type Draft = Report & { audio?: string };
+export type Draft = Report & {
+  audio?: string;
+  extraction_review?: import("./extraction-domain").ExtractionReview;
+  extraction_auto?: {
+    transcript: string;
+    values: Partial<
+      Record<import("./incident-autofill").AutoField, string>
+    >;
+  };
+  extraction_manual?: import("./incident-autofill").AutoField[];
+};
 export type SummaryItem = {
   id: string;
   section: "issues_by_location" | "work_list";
@@ -163,7 +174,7 @@ export function compile(reports: Report[], id: string, now: string): Summary {
 }
 export function summaryText(s: Summary) {
   return (
-    `FieldBrief · Compiled incident handover\n${s.created_at}\n\n` +
+    `Bantay Field · Compiled incident handover\n${s.created_at}\n\n` +
     s.items
       .map(
         (i) =>

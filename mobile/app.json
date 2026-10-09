@@ -6,13 +6,16 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.fieldbrief.mobile"
     },
-    "version": "1.1.0",
+    "version": "1.3.0",
     "orientation": "default",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/bantay-icon.png",
     "android": {
       "allowBackup": false,
-      "versionCode": 2,
-      "permissions": ["CAMERA", "RECORD_AUDIO"],
+      "versionCode": 9,
+      "permissions": [
+        "CAMERA",
+        "RECORD_AUDIO"
+      ],
       "blockedPermissions": [
         "android.permission.READ_MEDIA_AUDIO",
         "android.permission.READ_MEDIA_VIDEO",
@@ -20,7 +23,7 @@
       ],
       "package": "com.fieldbrief.mobile"
     },
-    "name": "FieldBrief",
+    "name": "Bantay Field",
     "userInterfaceStyle": "light",
     "plugins": [
       "expo-router",
@@ -28,9 +31,9 @@
       [
         "expo-image-picker",
         {
-          "cameraPermission": "FieldBrief uses your camera for local incident evidence.",
+          "cameraPermission": "Bantay Field uses your camera for local incident evidence.",
           "photosPermission": "Choose a photo for your local incident report.",
-          "microphonePermission": "FieldBrief records your observation for on-device transcription."
+          "microphonePermission": "Bantay Field records your observation for on-device transcription."
         }
       ],
       [

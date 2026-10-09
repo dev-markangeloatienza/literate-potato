@@ -110,6 +110,22 @@ describe("SQLite durability and media ownership", () => {
     expect(await store.setting("draft")).toEqual(other);
     expect(await store.setting("draft:a")).toBeNull();
   });
+  it("recovers pending extraction without changing manually entered fields or audio", async () => {
+    const draft: Draft = {
+      ...report,
+      affected_people: "Responder confirmed two families",
+      audio: "file://app/audio/retry.wav",
+      extraction_review: {
+        transcript: report.note,
+        suggestions: { affected_people: [], hazards: [report.note], needs: [] },
+      },
+    };
+    await store.setSetting("draft:a", draft);
+    await store.collectOrphans();
+    const recovered = await store.setting<Draft>("draft:a");
+    expect(recovered).toEqual(draft);
+    expect(await store.reports()).toEqual([]);
+  });
   it("preserves source-linked immutable snapshots after source deletion", async () => {
     await store.saveReport(report);
     const snapshot = compile([report], randomUUID(), "now");

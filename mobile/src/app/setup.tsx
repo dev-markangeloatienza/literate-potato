@@ -6,6 +6,7 @@ import * as speech from "../speech";
 import { setting } from "../storage";
 import { Button, Busy, Notice, styles, colors } from "../ui";
 import { router } from "expo-router";
+import { ExtractionSetup } from "../extraction-setup";
 import {
   artifact,
   speechModels,
@@ -14,6 +15,7 @@ import {
   SpeechModelId,
 } from "../speech-models";
 export default function Setup() {
+  const [extractionBusy, setExtractionBusy] = useState(false);
   const [model, setModel] = useState(artifact(speechModels[0]));
   const [language, setLanguage] = useState<SpeechLanguage>("auto");
   const [ready, setReady] = useState(false),
@@ -126,7 +128,7 @@ export default function Setup() {
   return (
     <ScrollView style={styles.page} contentContainerStyle={styles.content}>
       <Text style={styles.eyebrow}>Prepared once. Available offline.</Text>
-      <Text style={styles.title}>Speech on your phone</Text>
+      <Text style={styles.title}>AI on your phone</Text>
       <Button
         title="Back to reports"
         secondary
@@ -144,7 +146,7 @@ export default function Setup() {
             <Button
               title={`${model.id === m.id ? "Selected · " : ""}${m.name} · ${(m.bytes / 1e6).toFixed(1)} MB`}
               secondary
-              disabled={!!busy || model.id === m.id}
+              disabled={extractionBusy || !!busy || model.id === m.id}
               onPress={() => void switchModel(m.id)}
             />
             <Text style={styles.body}>{m.description}</Text>
@@ -160,7 +162,12 @@ export default function Setup() {
             key={value}
             title={`${language === value ? "Selected · " : ""}${value === "auto" ? "Auto-detect" : value === "tl" ? "Filipino / Taglish" : "English"}`}
             secondary
-            disabled={!!busy || !model.multilingual || language === value}
+            disabled={
+              extractionBusy ||
+              !!busy ||
+              !model.multilingual ||
+              language === value
+            }
             onPress={() => void switchLanguage(value)}
           />
         ))}
@@ -202,7 +209,7 @@ export default function Setup() {
         )}
         <Button
           title={ready ? "Verify / repair model" : "Download speech model"}
-          disabled={!!busy}
+          disabled={extractionBusy || !!busy}
           icon="download-outline"
           onPress={() => void prepare()}
         />
@@ -218,6 +225,10 @@ export default function Setup() {
         )}
       </View>
       {error && <Notice text={error} error />}
+      <ExtractionSetup
+        disabled={extractionBusy || !!busy}
+        onBusy={setExtractionBusy}
+      />
       <View style={styles.card}>
         <Text style={styles.label}>Verify native speech</Text>
         <Text style={styles.body}>
@@ -228,7 +239,7 @@ export default function Setup() {
         <Button
           title="Run local speech check"
           secondary
-          disabled={!ready || !!busy}
+          disabled={!ready || extractionBusy || !!busy}
           onPress={() => void check()}
         />
         {busy.startsWith("Running") && (
@@ -272,8 +283,9 @@ export default function Setup() {
         </Text>
         <Text style={styles.body}>
           Whisper (MIT), whisper.cpp (MIT), whisper.rn (MIT), Expo / React
-          Native, SQLite. Built with Codex. Photo interpretation and generative
-          extraction are not included in this core build.
+          Native, SQLite. Qwen3 (Apache 2.0), llama.cpp and llama.rn (MIT)
+          provide local incident extraction. Built with Codex. Photo
+          interpretation is not included.
         </Text>
         <Text
           selectable

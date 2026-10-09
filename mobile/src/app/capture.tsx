@@ -21,6 +21,11 @@ import { Draft, statuses, incidentTypes, priorities } from "../domain";
 import * as Location from "expo-location";
 import * as store from "../storage";
 import * as speech from "../speech";
+import * as extraction from "../extraction";
+import {
+  autoFillIncidentFields,
+  editIncidentDraft,
+} from "../incident-autofill";
 import { recorder } from "../../modules/field-recorder";
 import { Button, Busy, Field, Notice, styles, colors } from "../ui";
 
@@ -62,6 +67,13 @@ export default function Capture() {
       } else {
         value = saved || store.newDraft();
         setRecovered(!!saved);
+      }
+      if (value.extraction_review?.transcript === value.note) {
+        value = autoFillIncidentFields(
+          value,
+          value.extraction_review.suggestions,
+        );
+        await store.setSetting(id ? "draft:" + id : "draft", value);
       }
       if (active) {
         latest.current = value;
@@ -144,9 +156,9 @@ export default function Capture() {
       if (mounted.current) setBusy("");
     }
   }
-  function update(patch: Partial<Draft>) {
+  function update(patch: Partial<Draft>, manual = false) {
     if (!latest.current) return;
-    const value = { ...latest.current, ...patch };
+    const value = editIncidentDraft(latest.current, patch, manual);
     latest.current = value;
     dirty.current = true;
     setDraft(value);
@@ -162,7 +174,7 @@ export default function Capture() {
   }
   function back() {
     if (recordingRef.current || busy) {
-      setError("Stop recording or cancel transcription before leaving.");
+      setError("Stop recording or cancel processing before leaving.");
       return;
     }
     const leave = () => {
@@ -251,6 +263,7 @@ export default function Capture() {
         if (recordingRef.current) void stopRef.current(false);
         operationState.generation++;
         void speech.cancel();
+        void extraction.cancel();
       }
     });
     return () => {
@@ -258,6 +271,7 @@ export default function Capture() {
       sub.remove();
       operationState.generation++;
       void speech.cancel();
+      void extraction.cancel();
       if (recordingRef.current) void recorder?.stop();
     };
   }, []);
@@ -285,6 +299,7 @@ export default function Capture() {
         original === latest.current?.note
       ) {
         update({ note: text, transcription_source: "voice" });
+        await collectSuggestions(text, token);
       }
     } catch (e) {
       if (mounted.current)
@@ -292,6 +307,35 @@ export default function Capture() {
           e instanceof Error
             ? e.message
             : "Speech failed. Audio is retained for retry.",
+        );
+    } finally {
+      if (mounted.current) setBusy("");
+    }
+  }
+  async function collectSuggestions(text: string, token: number) {
+    setBusy("Suggesting incident details on this phone · CPU");
+    const suggestions = await extraction.extract(text);
+    if (
+      mounted.current &&
+      token === operation.current.generation &&
+      latest.current?.note === text
+    )
+      update(autoFillIncidentFields(latest.current, suggestions));
+  }
+  async function suggest() {
+    const text = latest.current?.note;
+    if (!text) return;
+    const token = ++operation.current.generation;
+    setError("");
+    update({ extraction_review: undefined });
+    try {
+      await collectSuggestions(text, token);
+    } catch (e) {
+      if (mounted.current)
+        setError(
+          e instanceof Error
+            ? e.message
+            : "Extraction failed. Your observation is retained.",
         );
     } finally {
       if (mounted.current) setBusy("");
@@ -371,7 +415,13 @@ export default function Capture() {
     setError("");
     try {
       await queue.current;
-      const { audio, ...report } = latest.current;
+      const {
+        audio,
+        extraction_review: _review,
+        extraction_auto: _auto,
+        extraction_manual: _manual,
+        ...report
+      } = latest.current;
       await store.saveReport({
         ...report,
         location: report.location.trim(),
@@ -513,7 +563,8 @@ export default function Capture() {
               <Text style={styles.label}>Voice observation</Text>
               <Text style={styles.body}>
                 Microphone audio stays local. Record up to 60 seconds, then
-                transcribe with Whisper.
+                transcribe and fill incident details automatically. Review the
+                fields before saving. Prepare both models in Local AI first.
               </Text>
               <Text style={styles.body}>
                 {speechLabel || "Selected local speech model"}. Change model and
@@ -558,6 +609,17 @@ export default function Capture() {
                   operation.current.generation++;
                   setBusy("Cancelling transcription…");
                   void speech.cancel();
+                }}
+              />
+            )}
+            {busy.startsWith("Suggesting") && (
+              <Button
+                title="Cancel extraction"
+                secondary
+                onPress={() => {
+                  operation.current.generation++;
+                  setBusy("Cancelling extraction…");
+                  void extraction.cancel();
                 }}
               />
             )}
@@ -642,6 +704,20 @@ export default function Capture() {
               disabled={!!busy || recording}
               onChange={(issue) => update({ issue })}
             />
+            <Button
+              title="Fill incident details / retry"
+              secondary
+              disabled={!!busy || recording || !draft.note.trim()}
+              onPress={() => void suggest()}
+            />
+            {error && <Notice text={error} error />}
+            <Text style={styles.body}>
+              Extraction fills the fields below on this phone. Check counts,
+              negations and uncertainty before saving. Manual edits are kept.
+            </Text>
+            {draft.extraction_auto && (
+              <Notice text="Incident details filled automatically. Review or edit the fields below before saving. Your manual entries are kept." />
+            )}
             <Text style={styles.label}>Incident type</Text>
             <View style={styles.row}>
               {incidentTypes.map((value) => (
@@ -652,7 +728,7 @@ export default function Capture() {
                     selected: (draft.incident_type || "Unspecified") === value,
                   }}
                   disabled={!!busy || recording}
-                  onPress={() => update({ incident_type: value })}
+                  onPress={() => update({ incident_type: value }, true)}
                   style={[
                     styles.chip,
                     (draft.incident_type || "Unspecified") === value &&
@@ -665,8 +741,9 @@ export default function Capture() {
             </View>
             <Text style={styles.label}>Responder-assessed priority</Text>
             <Text style={styles.body}>
-              Choose based on your assessment. Unknown details can remain blank;
-              the app does not assess structural safety.
+              Initially selected from your observation. Review and change based
+              on your assessment. Unknown details can remain blank; the app does
+              not assess structural safety.
             </Text>
             <View style={styles.row}>
               {priorities.map((value) => (
@@ -677,7 +754,7 @@ export default function Capture() {
                     selected: (draft.priority || "Unassessed") === value,
                   }}
                   disabled={!!busy || recording}
-                  onPress={() => update({ priority: value })}
+                  onPress={() => update({ priority: value }, true)}
                   style={[
                     styles.chip,
                     (draft.priority || "Unassessed") === value &&
@@ -692,21 +769,21 @@ export default function Capture() {
               label="Affected people (confirmed count or description)"
               value={draft.affected_people || ""}
               disabled={!!busy || recording}
-              onChange={(affected_people) => update({ affected_people })}
+              onChange={(affected_people) => update({ affected_people }, true)}
             />
             <Field
               label="Observed hazards"
               multiline
               value={draft.hazards || ""}
               disabled={!!busy || recording}
-              onChange={(hazards) => update({ hazards })}
+              onChange={(hazards) => update({ hazards }, true)}
             />
             <Field
               label="Requested resources / needs"
               multiline
               value={draft.needs || ""}
               disabled={!!busy || recording}
-              onChange={(needs) => update({ needs })}
+              onChange={(needs) => update({ needs }, true)}
             />
             <Field
               label="Recorded follow-up (optional)"
