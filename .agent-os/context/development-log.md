@@ -1,0 +1,13 @@
+# Development evidence
+
+2026-10-10 (Asia/Manila): Workspace began with PRD and agent scaffolding only. No prior app code or Git history existed here. Initialized a local feature/fieldbrief-mobile branch to record new work. Existing web reference was described by PRD; its implementation was not copied or represented as native evidence.
+
+Created native Expo/React Native app, domain contracts, camera/gallery photo ownership and thumbnail policy, SQLite reports/draft recovery/snapshot persistence, history/search/status/delete, compiled source-linked handover, model preparation and native Whisper integration, project-owned PCM WAV recorder, failure/cancellation paths, test suite and release APK build.
+
+Initial Android arm64 release build succeeded (6m29s). Subsequent rebuild found missing Buffer polyfill when bundling the corrected native speech import; added Buffer dependency. Final validation and physical-device evidence are tracked separately.
+
+Physical A55 test: standalone app installed, user captured a keyboard photo into a draft. Gallery config removed microphone permission; corrected the actual packaged manifest and added native config assertions. Updated app retained local model/draft assets. With airplane_mode_on=1 and Wi-Fi disabled, the real native model transcribed the 11-second bundled JFK WAV correctly. Baseline 35.6 seconds included pure-JS SHA-256 readiness verification and model loading. Replaced pure-JS hashing with native streaming MessageDigest and added per-phase benchmark fields; optimized real phone check returned the correct transcript in 1.1 seconds total. This is one sample/device measurement, not a broad accuracy claim.
+
+User reported cold deep-link Local AI screen had no Home/back route. Added an explicit Back to reports action and initialRouteName=index; updated APK installed and cold deep-link Back verified to return Home. Saved immutable handover and its source photo report reopened offline. A live recording benchmark measured 1.2 seconds; the unfinished draft is preserved and accuracy remains unconfirmed. Force-stopped/relaunched at Home offline; one user-saved report survived.
+
+Hackathon dates and baseline eligibility were not supplied. This log records actual session work and does not establish compliance with an unknown event window. No historical timing was fabricated.

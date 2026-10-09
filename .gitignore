@@ -1,0 +1,12 @@
+mobile/node_modules/
+mobile/.expo/
+mobile/android/
+mobile/ios/
+mobile/dist/
+mobile/*.apk
+*.log
+mobile/audit-results.json
+artifacts/
+.env*
+mobile/modules/**/android/build/
+mobile/modules/**/android/.gradle/
