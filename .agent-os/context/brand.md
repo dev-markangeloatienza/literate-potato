@@ -8,3 +8,4 @@ Selected output inspected visually. Uses regular launcher icon configuration and
 
 Contrast checks: primary button text 6.76:1, muted text on paper 5.40:1, navy on selected amber 9.33:1, inverse muted text 10.58:1.
 Android arm64 release build and generated native manifest checks pass. APK: mobile/Bantay-Field-1.3.0.apk. Not installed in this branding task; device layout remains unverified.
+2026-10-10 user requested installation: adb install -r succeeded on Samsung A55 RRCX704Y83A. Package version 1.3.0/code 9 verified; MainActivity cold launch Status ok (359 ms). No uninstall/data clear performed. Device screen appearance and saved-data contents not inspected.
